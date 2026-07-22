@@ -78,7 +78,6 @@ def _simplify_queue_entry(item: dict) -> dict:
     dates = a.get("dates") or {}
     stats = a.get("statistics") or {}
     provider_data = stats.get("provider-data", {}) if isinstance(stats, dict) else {}
-    computed = stats.get("computed-data", {}) if isinstance(stats, dict) else {}
     return {
         "benefit": a.get("benefit"),
         "provider": a.get("provider"),
