@@ -11,7 +11,7 @@ availability dashboards.
 Tools: search_queues, search_benefits, list_provinces.
 
 Author: Bartosz Kuć <firma@bartosza.pl>
-Repo:   https://github.com/bartosz-kuc/nfz-mcp
+Repo:   https://github.com/bartosz-kuc/honest-nfz-mcp
 License: MIT
 """
 

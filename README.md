@@ -31,7 +31,7 @@ Three tools:
 ## Setup
 
 ```bash
-git clone https://github.com/bartosz-kuc/nfz-mcp.git
+git clone https://github.com/bartosz-kuc/honest-nfz-mcp.git
 cd nfz-mcp
 python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt

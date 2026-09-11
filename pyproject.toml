@@ -28,9 +28,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/bartosz-kuc/nfz-mcp"
-Repository = "https://github.com/bartosz-kuc/nfz-mcp"
-Issues = "https://github.com/bartosz-kuc/nfz-mcp/issues"
+Homepage = "https://github.com/bartosz-kuc/honest-nfz-mcp"
+Repository = "https://github.com/bartosz-kuc/honest-nfz-mcp"
+Issues = "https://github.com/bartosz-kuc/honest-nfz-mcp/issues"
 
 [project.scripts]
 nfz-mcp = "nfz_mcp:sync_main"

@@ -3,7 +3,7 @@
   "name": "nfz-mcp",
   "description": "Local MCP server for Polish NFZ waiting lists and medical service search.",
   "repository": {
-    "url": "https://github.com/bartosz-kuc/nfz-mcp",
+    "url": "https://github.com/bartosz-kuc/honest-nfz-mcp",
     "source": "github"
   },
   "version": "0.1.0",
