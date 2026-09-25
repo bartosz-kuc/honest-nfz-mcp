@@ -51,6 +51,10 @@ PROVINCES = {
 CASE_LABELS = {1: "stabilny", 2: "pilny"}
 PROVINCE_RE = re.compile(r"^\d{2}$")
 
+# NFZ API page-size maximum, and how many pages a locality search may scan.
+NFZ_MAX_PAGE_SIZE = 25
+LOCALITY_MAX_PAGES = 10
+
 
 def _validate_province(p: str) -> str:
     p = p.strip()
@@ -105,7 +109,9 @@ async def _list_tools() -> list[Tool]:
                 "Search NFZ waiting lists (kolejki) for a medical service in a province. Returns the first-available "
                 "date and average wait time reported by each provider. `benefit` is a partial (case-insensitive) match "
                 "on the official service name — use `search_benefits` first if unsure. `case`: 1 = stabilny (routine), "
-                "2 = pilny (urgent)."
+                "2 = pilny (urgent). `locality` is applied by the NFZ API, so the whole province is searched, not just "
+                "the first result page; matches are also re-checked locally, scanning at most "
+                f"{LOCALITY_MAX_PAGES} result pages of {NFZ_MAX_PAGE_SIZE}."
             ),
             inputSchema={
                 "type": "object",
@@ -113,7 +119,7 @@ async def _list_tools() -> list[Tool]:
                     "benefit": {"type": "string", "description": "Partial name of the medical service (e.g., 'PORADNIA KARDIOLOGICZNA')"},
                     "province": {"type": "string", "description": "2-digit province code (see list_provinces). E.g., 07 = MAZOWIECKIE."},
                     "case": {"type": "integer", "enum": [1, 2], "default": 1, "description": "1 = stabilny (routine), 2 = pilny (urgent)"},
-                    "locality": {"type": "string", "description": "Optional city filter (case-insensitive substring match on the response)."},
+                    "locality": {"type": "string", "description": "Optional city/district filter, case-insensitive substring (e.g., 'WARSZAWA' also matches 'WARSZAWA MOKOTÓW')."},
                     "limit": {"type": "integer", "default": 20, "description": "Max results to return (default 20, max 25 per NFZ API)"},
                 },
                 "required": ["benefit", "province"],
@@ -161,22 +167,44 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         benefit = arguments["benefit"].strip()
         province = _validate_province(arguments["province"])
         case = _validate_case(arguments.get("case", 1))
-        locality_filter = (arguments.get("locality") or "").strip().lower()
-        limit = min(int(arguments.get("limit", 20)), 25)
+        locality = (arguments.get("locality") or "").strip()
+        locality_filter = locality.lower()
+        limit = min(int(arguments.get("limit", 20)), NFZ_MAX_PAGE_SIZE)
 
-        data = _get("queues", {
-            "benefit": benefit,
-            "province": province,
-            "case": case,
-            "limit": limit,
-            "page": 1,
-        })
-        entries = [_simplify_queue_entry(item) for item in data.get("data", [])]
+        params = {"benefit": benefit, "province": province, "case": case}
+        pages_scanned = 0
+        page_cap_hit = False
         if locality_filter:
-            entries = [e for e in entries if e.get("locality") and locality_filter in e["locality"].lower()]
+            # The NFZ API filters by locality itself (case-insensitive substring),
+            # so matches beyond the first page are found. Re-check locally and
+            # page further (up to LOCALITY_MAX_PAGES) if any entries get dropped.
+            params["locality"] = locality
+            # limit <= 0 goes to the API unchanged (default page or HTTP 400), as without a locality.
+            page_size = NFZ_MAX_PAGE_SIZE if limit > 0 else limit
+            entries = []
+            total_count = None
+            for page in range(1, LOCALITY_MAX_PAGES + 1):
+                data = _get("queues", {**params, "limit": page_size, "page": page})
+                pages_scanned = page
+                if page == 1:
+                    total_count = data.get("meta", {}).get("count")
+                for item in data.get("data", []):
+                    e = _simplify_queue_entry(item)
+                    if e.get("locality") and locality_filter in e["locality"].lower():
+                        entries.append(e)
+                if len(entries) >= limit or not (data.get("links") or {}).get("next"):
+                    break
+            else:
+                page_cap_hit = True
+            if limit > 0:
+                entries = entries[:limit]
+        else:
+            data = _get("queues", {**params, "limit": limit, "page": 1})
+            total_count = data.get("meta", {}).get("count")
+            entries = [_simplify_queue_entry(item) for item in data.get("data", [])]
 
         result = {
-            "total_count_in_api": data.get("meta", {}).get("count"),
+            "total_count_in_api": total_count,
             "returned": len(entries),
             "search": {
                 "benefit": benefit,
@@ -187,6 +215,13 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             },
             "results": entries,
         }
+        if locality_filter:
+            result["pages_scanned"] = pages_scanned
+            if page_cap_hit:
+                result["note"] = (
+                    f"Stopped after {LOCALITY_MAX_PAGES} pages of {NFZ_MAX_PAGE_SIZE}; "
+                    "more matching providers may exist."
+                )
         return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
     raise ValueError(f"Unknown tool: {name}")

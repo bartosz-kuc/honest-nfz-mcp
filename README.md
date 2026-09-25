@@ -1,4 +1,4 @@
-# nfz-mcp
+# honest-nfz-mcp
 
 Local MCP server for the **Polish National Health Fund (NFZ) public API** — waiting lists ("kolejki") and the medical-service dictionary. No authentication required.
 
@@ -14,7 +14,7 @@ This server hands NFZ's data to your AI as structured JSON. Ask "cheapest wait t
 
 Three tools:
 
-- `search_queues` — waiting list search: partial-name benefit + province + `case` (routine vs urgent), returns first-available date and average wait per provider.
+- `search_queues` — waiting list search: partial-name benefit + province + `case` (routine vs urgent) + optional `locality` (city/district), returns first-available date and average wait per provider.
 - `search_benefits` — search the NFZ service dictionary to discover the exact benefit name to use.
 - `list_provinces` — the 2-digit province code map (01–16).
 
@@ -32,10 +32,12 @@ Three tools:
 
 ```bash
 git clone https://github.com/bartosz-kuc/honest-nfz-mcp.git
-cd nfz-mcp
+cd honest-nfz-mcp
 python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
 ```
+
+On Windows use `python` instead of `python3`, and `venv\Scripts\pip` / `venv\Scripts\python` instead of the `venv/bin/...` paths (here and in the configs below).
 
 Register with Claude Code:
 
@@ -64,7 +66,7 @@ Two-step: `search_benefits(name="kardio")` → find exact benefit name → `sear
 
 > "Any pediatric endocrinology openings in Kraków?"
 
-`search_queues(benefit="poradnia endokrynologiczna dla dzieci", province="06", case=1, locality="KRAKÓW")` — the `locality` filter narrows the response client-side.
+`search_queues(benefit="poradnia endokrynologiczna dla dzieci", province="06", case=1, locality="KRAKÓW")` — `locality` is a case-insensitive substring filter applied by the NFZ API, so it covers the whole province, not just the first result page. Matches are re-checked locally, scanning at most 10 result pages of 25.
 
 ## Data flow
 
