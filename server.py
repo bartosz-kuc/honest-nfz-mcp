@@ -106,8 +106,9 @@ async def _list_tools() -> list[Tool]:
         Tool(
             name="search_queues",
             description=(
-                "Search NFZ waiting lists (kolejki) for a medical service in a province. Returns the first-available "
-                "date and average wait time reported by each provider. `benefit` is a partial (case-insensitive) match "
+                "Search NFZ waiting lists (kolejki) for a medical service in a province. Returns per provider the "
+                "first-available date and average wait reported to NFZ — NFZ currently often leaves the date empty "
+                "(null), so check the provider-reported statistics too. `benefit` is a partial (case-insensitive) match "
                 "on the official service name — use `search_benefits` first if unsure. `case`: 1 = stabilny (routine), "
                 "2 = pilny (urgent). `locality` is applied by the NFZ API, so the whole province is searched, not just "
                 "the first result page; matches are also re-checked locally, scanning at most "
@@ -116,7 +117,7 @@ async def _list_tools() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "benefit": {"type": "string", "description": "Partial name of the medical service (e.g., 'PORADNIA KARDIOLOGICZNA')"},
+                    "benefit": {"type": "string", "description": "Partial name of the medical service (e.g., 'ŚWIADCZENIA Z ZAKRESU OKULISTYKI', 'ODDZIAŁ KARDIOLOGICZNY')"},
                     "province": {"type": "string", "description": "2-digit province code (see list_provinces). E.g., 07 = MAZOWIECKIE."},
                     "case": {"type": "integer", "enum": [1, 2], "default": 1, "description": "1 = stabilny (routine), 2 = pilny (urgent)"},
                     "locality": {"type": "string", "description": "Optional city/district filter, case-insensitive substring (e.g., 'WARSZAWA' also matches 'WARSZAWA MOKOTÓW')."},
